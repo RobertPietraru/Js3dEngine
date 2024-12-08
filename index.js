@@ -49,22 +49,48 @@ class Engine {
 		const xmax = 0.5, xmin = -0.5, ymax = 0.5, ymin = -0.5;
 		const zproj = 8;
 		const scale = 10;
-		for (let i = 0; i< entity.vertices.length;i++){
-			const v = entity.vertices[i];
+		/// projected vertices
+		const pv = entity.vertices.map((v) => {
 			const xprime = v.x * (zproj/v.z), yprime= v.y * (zproj/v.z)
 			console.log(xprime, yprime);
 			const px = scale * (xprime - xmin) / (xmax-xmin);
 			const py = scale * (yprime - ymin) / (ymax-ymin);
-
+			return {
+				x: px,
+				y: py,
+			};
+		});
+		for (let i = 0; i <pv.length ; i++){
+			const px = pv[i].x;
+			const py = pv[i].y;
 			if (i < 4){
-				this.ctx.fillStyle = "orange";
+				this.ctx.fillStyle = "red";
 
 				this.ctx.fillRect(100 + px, 100 + py, 1,1)
 			} else {
-				this.ctx.fillStyle = "blue";
+				this.ctx.fillStyle = "green";
 
 				this.ctx.fillRect(100 + px, 100 + py, 1,1)
 			}
+		}
+
+		this.ctx.beginPath();
+
+		this.ctx.strokeStyle = "red";
+		this.ctx.lineWidth = 0.2;
+		for (let i = 0; i < entity.edges.length;i++){
+			const edge = entity.edges[i];
+			const x1 = 100 + pv[edge[0]].x;
+			const y1 = 100 + pv[edge[0]].y;
+
+			const x2 = 100 + pv[edge[1]].x;
+			const y2 = 100 + pv[edge[1]].y;
+
+			console.log("drawing edge from", x1, y2, "to", x2, y2);
+			this.ctx.moveTo(x1,y1);
+			this.ctx.lineTo(x2,y2);
+			this.ctx.stroke();
+			this.ctx.closePath();
 		}
 	}
 	rotateY(entity, angle) {
@@ -116,14 +142,35 @@ async function render_scene(base_element){
 	const s = 0.5;
 
 	const shape = new Entity3d([
-		new Point3d(-s, -s,3-s),
-		new Point3d(-s,s,3-s),
-		new Point3d(s,s,3-s),
-		new Point3d(s,-s,3+s),
-		new Point3d(-s, -s,3+s),
-		new Point3d(-s,s, 3+s),
-		new Point3d(s,s,3+s),
-		new Point3d(s,-s,3+s),
+		/// back face counter clockwise
+		new Point3d(-s,-s, 3-s),
+		new Point3d(+s,-s, 3-s),
+		new Point3d(+s,+s, 3-s),
+		new Point3d(-s,+s, 3-s),
+		/// front face counter clockwise
+		new Point3d(-s,+s, 3+s),
+		new Point3d(+s,+s, 3+s),
+		new Point3d(+s,-s, 3+s),
+		new Point3d(-s,-s, 3+s),
+	], [
+		/// connections inside the back face
+		[0,1],
+		[1,2],
+		[2,3],
+		[0,3],
+
+
+		/// connections inside the front face
+		[4+0,4+1],
+		[4+1,4+2],
+		[4+2,4+3],
+		[4+0,4+3],
+
+		/// connections between the 2 edges
+		[0, 7-0],
+		[1, 7-1],
+		[2, 7-2],
+		[3, 7-3],
 	]);
 	shape.goto(0,5,0);
 	const engine = new Engine(ctx, base_element.width, base_element.height);
